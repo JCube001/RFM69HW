@@ -1,0 +1,25 @@
+#######################################
+# Syntax Coloring Map for RFM69HW
+#
+# Note: Only use tabs, not spaces!
+#
+# Datatypes (KEYWORD1)
+# Methods and Functions (KEYWORD2)
+# Constants (LITERAL1)
+#######################################
+
+RFM69HW	KEYWORD1
+begin	KEYWORD2
+bitRate	KEYWORD2
+calibrateOscillator	KEYWORD2
+carrierFrequency	KEYWORD2
+frequencyDeviation	KEYWORD2
+reset	KEYWORD2
+setBitRate	KEYWORD2
+setCarrierFrequency	KEYWORD2
+setFrequencyDeviation	KEYWORD2
+sleep	KEYWORD2
+standby	KEYWORD2
+temperature	KEYWORD2
+version	KEYWORD2
+
