@@ -31,7 +31,7 @@ class RFM69HW
 {
 public:
     RFM69HW(const int8_t slaveSelectPin = SS, const int8_t resetPin = -1);
-    bool begin();
+    bool begin(const uint32_t bps = 0);
     uint32_t bitRate();
     void calibrateOscillator();
     uint16_t carrierFrequency();
@@ -171,6 +171,12 @@ private:
     void writeRegister2(const uint8_t reg, const uint16_t value);
     void writeRegister3(const uint8_t reg, const uint32_t value);
 
+    static const uint32_t BITRATE_MAX_BPS;
+    static const uint32_t BITRATE_MIN_BPS;
+    static const uint32_t FDA_MAX_HZ;
+    static const uint32_t FDA_MIN_HZ;
+    static const uint16_t FR_MAX_MHZ;
+    static const uint16_t FR_MIN_MHZ;
     static const uint16_t FREQUENCY_MULTIPLIER;
     static const uint8_t FSTEP_HZ;
     static const uint32_t FXOSC_HZ;

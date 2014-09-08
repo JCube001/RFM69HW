@@ -24,7 +24,27 @@ THE SOFTWARE.
 
 #include <SPI.h>
 #include "RFM69HW.h"
+#include "RFM69HW_config.h"
 
+const uint32_t RFM69HW::BITRATE_MAX_BPS = 300 * 1000;
+const uint32_t RFM69HW::BITRATE_MIN_BPS = 1200;
+const uint32_t RFM69HW::FDA_MAX_HZ = 500 * 1000;
+const uint32_t RFM69HW::FDA_MIN_HZ = 600;
+#if RFM69HW_MODULE_FR_MHZ == 315
+const uint16_t RFM69HW::FR_MAX_MHZ = 340;
+const uint16_t RFM69HW::FR_MIN_MHZ = 290;
+#elif RFM69HW_MODULE_FR_MHZ == 433
+const uint16_t RFM69HW::FR_MAX_MHZ = 510;
+const uint16_t RFM69HW::FR_MIN_MHZ = 424;
+#elif RFM69HW_MODULE_FR_MHZ == 868
+const uint16_t RFM69HW::FR_MAX_MHZ = 890;
+const uint16_t RFM69HW::FR_MIN_MHZ = 862;
+#elif RFM69HW_MODULE_FR_MHZ == 915
+const uint16_t RFM69HW::FR_MAX_MHZ = 1020;
+const uint16_t RFM69HW::FR_MIN_MHZ = 890;
+#else
+#error RFM69HW_MODULE_FR_MHZ must be defined as either 315, 433, 868, or 915
+#endif // RFM69HW_MODULE_FR_MHZ
 const uint16_t RFM69HW::FREQUENCY_MULTIPLIER = 16384;
 const uint8_t RFM69HW::FSTEP_HZ = 61;
 const uint32_t RFM69HW::FXOSC_HZ = 32 * 1000000;
@@ -41,7 +61,7 @@ RFM69HW::RFM69HW(const int8_t slaveSelectPin, const int8_t resetPin) :
     }
 }
 
-bool RFM69HW::begin()
+bool RFM69HW::begin(const uint32_t bps)
 {
     SPI.begin();
     SPI.setBitOrder(MSBFIRST);
@@ -55,6 +75,7 @@ bool RFM69HW::begin()
     delay(10);
     if (version() == VERSION)
     {
+        setBitRate(bps);
         return true;
     }
     return false;
@@ -98,7 +119,7 @@ void RFM69HW::reset()
 
 void RFM69HW::setBitRate(const uint32_t bps)
 {
-    if (1200 <= bps && bps <= 300000)
+    if (BITRATE_MIN_BPS <= bps && bps <= BITRATE_MAX_BPS)
     {
         const uint16_t br = (uint16_t)(((float)FXOSC_HZ / bps) + 0.5f);
         writeRegister2(REG_BITRATEMSB, br);
@@ -107,16 +128,28 @@ void RFM69HW::setBitRate(const uint32_t bps)
 
 void RFM69HW::setCarrierFrequency(const uint16_t mhz)
 {
-    if (290 <= mhz && mhz <= 1020)
+    if (FR_MIN_MHZ <= mhz && mhz <= FR_MAX_MHZ)
     {
         const uint32_t frf = (uint32_t)mhz * FREQUENCY_MULTIPLIER;
-        writeRegister3(REG_FRFMSB, frf);
+        const uint8_t mode = readRegister1(REG_OPMODE);
+        if (mode & OPMODE_MODE_TX)
+        {
+            writeRegister1(REG_OPMODE, OPMODE_MODE_RX);
+            writeRegister3(REG_FRFMSB, frf);
+            writeRegister1(REG_OPMODE, OPMODE_MODE_TX);
+        }
+        else if (mode & OPMODE_MODE_RX)
+        {
+            writeRegister3(REG_FRFMSB, frf);
+            writeRegister1(REG_OPMODE, OPMODE_MODE_FS);
+            writeRegister1(REG_OPMODE, OPMODE_MODE_RX);
+        }
     }
 }
 
 void RFM69HW::setFrequencyDeviation(const uint32_t hz)
 {
-    if (2000 <= hz && hz <= 75000)
+    if (FDA_MIN_HZ <= hz && hz <= FDA_MAX_HZ)
     {
         const uint16_t fdev = (uint16_t)(((float)hz / FSTEP_HZ) + 0.5f);
         writeRegister2(REG_FDEVMSB, fdev);
