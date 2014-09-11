@@ -26,6 +26,7 @@ THE SOFTWARE.
 #include "RFM69HW.h"
 #include "RFM69HW_config.h"
 
+const uint8_t RFM69HW::AESKEY_NUM_BYTES = 16;
 const uint32_t RFM69HW::BITRATE_MAX_BPS = 300 * 1000;
 const uint32_t RFM69HW::BITRATE_MIN_BPS = 1200;
 const uint32_t RFM69HW::FDA_MAX_HZ = 500 * 1000;
@@ -48,6 +49,7 @@ const uint16_t RFM69HW::FR_MIN_MHZ = 890;
 const uint16_t RFM69HW::FREQUENCY_MULTIPLIER = 16384;
 const uint8_t RFM69HW::FSTEP_HZ = 61;
 const uint32_t RFM69HW::FXOSC_HZ = 32 * 1000000;
+const uint8_t RFM69HW::SYNCVALUE_NUM_BYTES = 8;
 const float RFM69HW::TEMP_MAX_C = 85.0f;
 const float RFM69HW::TEMP_MIN_C = -40.0f;
 const uint8_t RFM69HW::VERSION = 0x24;
@@ -90,6 +92,11 @@ uint32_t RFM69HW::bitRate()
     return (uint16_t)(((float)FXOSC_HZ / br) + 0.5f);
 }
 
+uint8_t RFM69HW::broadcastAddress()
+{
+    return readRegister1(REG_BROADCASTADRS);
+}
+
 void RFM69HW::calibrateOscillator()
 {
     standby();
@@ -109,6 +116,16 @@ uint32_t RFM69HW::frequencyDeviation()
     return fdev * FSTEP_HZ;
 }
 
+uint8_t RFM69HW::nodeAddress()
+{
+    return readRegister1(REG_NODEADRS);
+}
+
+uint8_t RFM69HW::payloadLength()
+{
+    return readRegister1(REG_PAYLOADLENGTH);
+}
+
 void RFM69HW::reset()
 {
     if (resetPin >= 0)
@@ -122,16 +139,21 @@ void RFM69HW::reset()
 
 void RFM69HW::setBitRate(const uint32_t bps)
 {
-    if (BITRATE_MIN_BPS <= bps && bps <= BITRATE_MAX_BPS)
+    if ((BITRATE_MIN_BPS <= bps) && (bps <= BITRATE_MAX_BPS))
     {
         const uint16_t br = (uint16_t)(((float)FXOSC_HZ / bps) + 0.5f);
         writeRegister2(REG_BITRATEMSB, br);
     }
 }
 
+void RFM69HW::setBroadcastAddress(const uint8_t address)
+{
+    writeRegister1(REG_BROADCASTADRS, address);
+}
+
 void RFM69HW::setCarrierFrequency(const uint16_t mhz)
 {
-    if (FR_MIN_MHZ <= mhz && mhz <= FR_MAX_MHZ)
+    if ((FR_MIN_MHZ <= mhz) && (mhz <= FR_MAX_MHZ))
     {
         const uint32_t frf = (uint32_t)mhz * FREQUENCY_MULTIPLIER;
         const uint8_t mode = readRegister1(REG_OPMODE);
@@ -150,12 +172,59 @@ void RFM69HW::setCarrierFrequency(const uint16_t mhz)
     }
 }
 
+void RFM69HW::setEncryptionKey(const char *key, const uint8_t length)
+{
+    if ((NULL != key) && ((0 < length) && (length <= AESKEY_NUM_BYTES)))
+    {
+        digitalWrite(slaveSelectPin, LOW);
+        SPI.transfer(REG_AESKEY1 | 0x80);
+        for (uint8_t i = 0; i < length; ++i)
+        {
+            SPI.transfer(key[i]);
+        }
+        // Fill in any remaining bytes with 0
+        for (uint8_t i = 0; i < (AESKEY_NUM_BYTES - length); ++i)
+        {
+            SPI.transfer(0x00);
+        }
+        digitalWrite(slaveSelectPin, HIGH);
+    }
+}
+
 void RFM69HW::setFrequencyDeviation(const uint32_t hz)
 {
-    if (FDA_MIN_HZ <= hz && hz <= FDA_MAX_HZ)
+    if ((FDA_MIN_HZ <= hz) && (hz <= FDA_MAX_HZ))
     {
         const uint16_t fdev = (uint16_t)(((float)hz / FSTEP_HZ) + 0.5f);
         writeRegister2(REG_FDEVMSB, fdev);
+    }
+}
+
+void RFM69HW::setNodeAddress(const uint8_t address)
+{
+    writeRegister1(REG_NODEADRS, address);
+}
+
+void RFM69HW::setPayloadLength(const uint8_t length)
+{
+    writeRegister1(REG_PAYLOADLENGTH, length);
+}
+
+void RFM69HW::setSyncWord(const char *word, const uint8_t length)
+{
+    if ((NULL != word) && ((0 < length) && (length <= SYNCVALUE_NUM_BYTES)))
+    {
+        digitalWrite(slaveSelectPin, LOW);
+        SPI.transfer(REG_SYNCVALUE1 | 0x80);
+        for (uint8_t i = 0; i < length; ++i)
+        {
+            SPI.transfer(word[i]);
+        }
+        digitalWrite(slaveSelectPin, HIGH);
+        // Update the sync size value in the sync config register
+        const uint8_t config = (readRegister1(REG_SYNCCONFIG) & 0xC7)
+                | ((length - 1) << 3);
+        writeRegister1(REG_SYNCCONFIG, config);
     }
 }
 

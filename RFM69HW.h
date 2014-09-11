@@ -33,13 +33,21 @@ public:
     RFM69HW(const int8_t slaveSelectPin = SS, const int8_t resetPin = -1);
     bool begin(const uint32_t bps = 0, const uint16_t mhz = 0);
     uint32_t bitRate();
+    uint8_t broadcastAddress();
     void calibrateOscillator();
     uint16_t carrierFrequency();
     uint32_t frequencyDeviation();
+    uint8_t nodeAddress();
+    uint8_t payloadLength();
     void reset();
     void setBitRate(const uint32_t bps);
+    void setBroadcastAddress(const uint8_t address);
     void setCarrierFrequency(const uint16_t mhz);
+    void setEncryptionKey(const char *key, const uint8_t length);
     void setFrequencyDeviation(const uint32_t hz);
+    void setNodeAddress(const uint8_t address);
+    void setPayloadLength(const uint8_t length);
+    void setSyncWord(const char *word, const uint8_t length);
     void sleep();
     void standby();
     float temperature();
@@ -172,6 +180,7 @@ private:
     void writeRegister2(const uint8_t reg, const uint16_t value);
     void writeRegister3(const uint8_t reg, const uint32_t value);
 
+    static const uint8_t AESKEY_NUM_BYTES;
     static const uint32_t BITRATE_MAX_BPS;
     static const uint32_t BITRATE_MIN_BPS;
     static const uint32_t FDA_MAX_HZ;
@@ -181,6 +190,7 @@ private:
     static const uint16_t FREQUENCY_MULTIPLIER;
     static const uint8_t FSTEP_HZ;
     static const uint32_t FXOSC_HZ;
+    static const uint8_t SYNCVALUE_NUM_BYTES;
     static const float TEMP_MAX_C;
     static const float TEMP_MIN_C;
     static const uint8_t VERSION;
