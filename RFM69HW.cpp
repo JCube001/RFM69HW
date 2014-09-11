@@ -48,6 +48,8 @@ const uint16_t RFM69HW::FR_MIN_MHZ = 890;
 const uint16_t RFM69HW::FREQUENCY_MULTIPLIER = 16384;
 const uint8_t RFM69HW::FSTEP_HZ = 61;
 const uint32_t RFM69HW::FXOSC_HZ = 32 * 1000000;
+const float RFM69HW::TEMP_MAX_C = 85.0f;
+const float RFM69HW::TEMP_MIN_C = -40.0f;
 const uint8_t RFM69HW::VERSION = 0x24;
 
 RFM69HW::RFM69HW(const int8_t slaveSelectPin, const int8_t resetPin) :
@@ -61,7 +63,7 @@ RFM69HW::RFM69HW(const int8_t slaveSelectPin, const int8_t resetPin) :
     }
 }
 
-bool RFM69HW::begin(const uint32_t bps)
+bool RFM69HW::begin(const uint32_t bps, const uint16_t mhz)
 {
     SPI.begin();
     SPI.setBitOrder(MSBFIRST);
@@ -76,6 +78,7 @@ bool RFM69HW::begin(const uint32_t bps)
     if (version() == VERSION)
     {
         setBitRate(bps);
+        setCarrierFrequency(mhz);
         return true;
     }
     return false;
@@ -166,17 +169,23 @@ void RFM69HW::standby()
     writeRegister1(REG_OPMODE, OPMODE_MODE_STDBY);
 }
 
-int8_t RFM69HW::temperature()
+float RFM69HW::temperature()
 {
     standby();
     writeRegister1(REG_TEMP1, TEMP1_TEMP_MEAS_START);
     while (readRegister1(REG_TEMP1) & TEMP1_TEMP_MEAS_RUNNING);
-    return map(readRegister1(REG_TEMP2), 0xFF, 0x00, -40, 85) + 10;
+    return mapTemperature(readRegister1(REG_TEMP2));
 }
 
 uint8_t RFM69HW::version()
 {
     return readRegister1(REG_VERSION);
+}
+
+float RFM69HW::mapTemperature(const uint8_t value)
+{
+    return ((((float)value - 255.0f) / -255.0f) * (TEMP_MAX_C - TEMP_MIN_C))
+            + TEMP_MIN_C;
 }
 
 uint8_t RFM69HW::readRegister1(const uint8_t reg)

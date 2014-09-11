@@ -31,7 +31,7 @@ class RFM69HW
 {
 public:
     RFM69HW(const int8_t slaveSelectPin = SS, const int8_t resetPin = -1);
-    bool begin(const uint32_t bps = 0);
+    bool begin(const uint32_t bps = 0, const uint16_t mhz = 0);
     uint32_t bitRate();
     void calibrateOscillator();
     uint16_t carrierFrequency();
@@ -42,7 +42,7 @@ public:
     void setFrequencyDeviation(const uint32_t hz);
     void sleep();
     void standby();
-    int8_t temperature();
+    float temperature();
     uint8_t version();
 
 private:
@@ -164,6 +164,7 @@ private:
         TEMP1_TEMP_MEAS_RUNNING = 0x04
     };
 
+    float mapTemperature(const uint8_t value);
     uint8_t readRegister1(const uint8_t reg);
     uint16_t readRegister2(const uint8_t reg);
     uint32_t readRegister3(const uint8_t reg);
@@ -180,6 +181,8 @@ private:
     static const uint16_t FREQUENCY_MULTIPLIER;
     static const uint8_t FSTEP_HZ;
     static const uint32_t FXOSC_HZ;
+    static const float TEMP_MAX_C;
+    static const float TEMP_MIN_C;
     static const uint8_t VERSION;
     const int8_t resetPin;
     const int8_t slaveSelectPin;
