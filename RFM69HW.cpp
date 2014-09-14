@@ -156,7 +156,7 @@ void RFM69HW::calibrateOscillator()
 
 uint16_t RFM69HW::carrierFrequency()
 {
-    const uint32_t frf = read32(RFM69HW_FRFMSB);
+    const uint32_t frf = read24(RFM69HW_FRFMSB);
     return frf / FREQUENCY_MULTIPLIER;
 }
 
@@ -210,12 +210,12 @@ void RFM69HW::setCarrierFrequency(const uint16_t mhz)
         if (mode & RFM69HW_OPMODE_TX)
         {
             write8(RFM69HW_OPMODE, RFM69HW_OPMODE_RX);
-            write32(RFM69HW_FRFMSB, frf);
+            write24(RFM69HW_FRFMSB, frf);
             write8(RFM69HW_OPMODE, RFM69HW_OPMODE_TX);
         }
         else if (mode & RFM69HW_OPMODE_RX)
         {
-            write32(RFM69HW_FRFMSB, frf);
+            write24(RFM69HW_FRFMSB, frf);
             write8(RFM69HW_OPMODE, RFM69HW_OPMODE_FS);
             write8(RFM69HW_OPMODE, RFM69HW_OPMODE_RX);
         }
@@ -288,6 +288,19 @@ void RFM69HW::standby()
     write8(RFM69HW_OPMODE, RFM69HW_OPMODE_STDBY);
 }
 
+/**
+ * @brief   Gets the temperature of the radio module.
+ * @details Reads the temperature of the radio and converts it to degrees
+ *          Celsius.
+ * @warning The CMOS temperature sensor on the RFM69HW is known to be wildly
+ *          inaccurate. If you really wish to make use of this sensor, then
+ *          you will need to take an initial reading and compare it against
+ *          the known ambient temperature. The difference between the two
+ *          values can then be used as an offset for estimating the actual
+ *          temperature based on future return values from this function.
+ *
+ * @return The temperature of the radio module in degrees Celsius.
+ */
 float RFM69HW::temperature()
 {
     standby();
@@ -296,17 +309,40 @@ float RFM69HW::temperature()
     return mapTemperature(read8(RFM69HW_TEMP2));
 }
 
+/**
+ * @brief   Gets the entire numeric version ID from the radio module.
+ * @details Reads the version register of the radio as-is.
+ *
+ * @retval 0x24 The expected version number of the RFM69HW.
+ * @return      The full version number of the radio module.
+ */
 uint8_t RFM69HW::version()
 {
     return read8(RFM69HW_VERSION);
 }
 
+/**
+ * @brief   Linear mapping function for computing temperature.
+ * @details Function for computing the temperature read from the CMOS sensor on
+ *          the radio module to degrees Celsius. Uses hard-coded values to
+ *          speed up computation.
+ *
+ * @param[in] value The raw temperature value read from the device register.
+ * @return          The computed temperature in degrees Celsius.
+ */
 float RFM69HW::mapTemperature(const uint8_t value)
 {
     return ((((float)value - 255.0f) / -255.0f) * (TEMP_MAX_C - TEMP_MIN_C))
             + TEMP_MIN_C;
 }
 
+/**
+ * @brief   Reads one register.
+ * @details Performs a read-only SPI transfer of the register @p reg.
+ *
+ * @param[in] reg The register to read.
+ * @return        The 8-bit value read from the register.
+ */
 uint8_t RFM69HW::read8(const uint8_t reg)
 {
     uint8_t value;
@@ -317,6 +353,14 @@ uint8_t RFM69HW::read8(const uint8_t reg)
     return value;
 }
 
+/**
+ * @brief   Reads two registers.
+ * @details Performs a burst mode read-only SPI transfer of the register @p reg
+ *          and the register at the next address.
+ *
+ * @param[in] reg The register to start reading at.
+ * @return        The 16-bit value read from the two registers.
+ */
 uint16_t RFM69HW::read16(const uint8_t reg)
 {
     uint16_t value = 0;
@@ -328,7 +372,15 @@ uint16_t RFM69HW::read16(const uint8_t reg)
     return value;
 }
 
-uint32_t RFM69HW::read32(const uint8_t reg)
+/**
+ * @brief   Reads three registers.
+ * @details Performs a burst mode read-only SPI transfer of the register @p reg
+ *          and the registers at the next two addresses.
+ *
+ * @param[in] reg The register to start reading at.
+ * @return        The 24-bit value read from the three registers.
+ */
+uint32_t RFM69HW::read24(const uint8_t reg)
 {
     uint32_t value = 0;
     digitalWrite(slaveSelectPin, LOW);
@@ -340,6 +392,13 @@ uint32_t RFM69HW::read32(const uint8_t reg)
     return value;
 }
 
+/**
+ * @brief   Writes one register.
+ * @details Performs a write-only SPI transfer of the register @p reg.
+ *
+ * @param[in] reg   The register to write.
+ * @param[in] value The 8-bit value to write to the register.
+ */
 void RFM69HW::write8(const uint8_t reg, const uint8_t value)
 {
     digitalWrite(slaveSelectPin, LOW);
@@ -348,6 +407,14 @@ void RFM69HW::write8(const uint8_t reg, const uint8_t value)
     digitalWrite(slaveSelectPin, HIGH);
 }
 
+/**
+ * @brief   Writes two registers.
+ * @details Performs a burst mode write-only SPI transfer of the register
+ *          @p reg and the register at the next address.
+ *
+ * @param[in] reg   The register to start writing at.
+ * @param[in] value The 16-bit value to write to the registers.
+ */
 void RFM69HW::write16(const uint8_t reg, const uint16_t value)
 {
     digitalWrite(slaveSelectPin, LOW);
@@ -357,7 +424,15 @@ void RFM69HW::write16(const uint8_t reg, const uint16_t value)
     digitalWrite(slaveSelectPin, HIGH);
 }
 
-void RFM69HW::write32(const uint8_t reg, const uint32_t value)
+/**
+ * @brief   Writes three registers.
+ * @details Performs a burst mode write-only SPI transfer of the register
+ *          @p reg and the registers at the next two addresses.
+ *
+ * @param[in] reg   The register to start writing at.
+ * @param[in] value The 24-bit value to write to the registers.
+ */
+void RFM69HW::write24(const uint8_t reg, const uint32_t value)
 {
     digitalWrite(slaveSelectPin, LOW);
     SPI.transfer(reg | 0x80);

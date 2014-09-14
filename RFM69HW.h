@@ -598,10 +598,10 @@ private:
     float mapTemperature(const uint8_t value);
     uint8_t read8(const uint8_t reg);
     uint16_t read16(const uint8_t reg);
-    uint32_t read32(const uint8_t reg);
+    uint32_t read24(const uint8_t reg);
     void write8(const uint8_t reg, const uint8_t value);
     void write16(const uint8_t reg, const uint16_t value);
-    void write32(const uint8_t reg, const uint32_t value);
+    void write24(const uint8_t reg, const uint32_t value);
 
     static const uint8_t AESKEY_NUM_BYTES;
     static const uint32_t BITRATE_MAX_BPS;
