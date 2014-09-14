@@ -1,4 +1,4 @@
-/*******************************************************************************
+/*
 The MIT License (MIT)
 
 Copyright (c) 2014 Jacob McGladdery
@@ -20,11 +20,21 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-*******************************************************************************/
+*/
+
+/**
+ * @file  RFM69HW.cpp
+ * @brief Implementation for the RFM69HW driver.
+ */
 
 #include <SPI.h>
 #include "RFM69HW.h"
 #include "RFM69HW_config.h"
+
+/**
+ * @addtogroup RFM69HW
+ * @{
+ */
 
 const uint8_t RFM69HW::AESKEY_NUM_BYTES = 16;
 const uint32_t RFM69HW::BITRATE_MAX_BPS = 300 * 1000;
@@ -257,7 +267,7 @@ float RFM69HW::mapTemperature(const uint8_t value)
             + TEMP_MIN_C;
 }
 
-uint8_t RFM69HW::readRegister1(const uint8_t reg)
+uint8_t RFM69HW::read8(const uint8_t reg)
 {
     uint8_t value;
     digitalWrite(slaveSelectPin, LOW);
@@ -267,7 +277,7 @@ uint8_t RFM69HW::readRegister1(const uint8_t reg)
     return value;
 }
 
-uint16_t RFM69HW::readRegister2(const uint8_t reg)
+uint16_t RFM69HW::read16(const uint8_t reg)
 {
     uint16_t value = 0;
     digitalWrite(slaveSelectPin, LOW);
@@ -278,7 +288,7 @@ uint16_t RFM69HW::readRegister2(const uint8_t reg)
     return value;
 }
 
-uint32_t RFM69HW::readRegister3(const uint8_t reg)
+uint32_t RFM69HW::read32(const uint8_t reg)
 {
     uint32_t value = 0;
     digitalWrite(slaveSelectPin, LOW);
@@ -290,7 +300,7 @@ uint32_t RFM69HW::readRegister3(const uint8_t reg)
     return value;
 }
 
-void RFM69HW::writeRegister1(const uint8_t reg, const uint8_t value)
+void RFM69HW::write8(const uint8_t reg, const uint8_t value)
 {
     digitalWrite(slaveSelectPin, LOW);
     SPI.transfer(reg | 0x80);
@@ -298,7 +308,7 @@ void RFM69HW::writeRegister1(const uint8_t reg, const uint8_t value)
     digitalWrite(slaveSelectPin, HIGH);
 }
 
-void RFM69HW::writeRegister2(const uint8_t reg, const uint16_t value)
+void RFM69HW::write16(const uint8_t reg, const uint16_t value)
 {
     digitalWrite(slaveSelectPin, LOW);
     SPI.transfer(reg | 0x80);
@@ -307,7 +317,7 @@ void RFM69HW::writeRegister2(const uint8_t reg, const uint16_t value)
     digitalWrite(slaveSelectPin, HIGH);
 }
 
-void RFM69HW::writeRegister3(const uint8_t reg, const uint32_t value)
+void RFM69HW::write32(const uint8_t reg, const uint32_t value)
 {
     digitalWrite(slaveSelectPin, LOW);
     SPI.transfer(reg | 0x80);
@@ -316,4 +326,6 @@ void RFM69HW::writeRegister3(const uint8_t reg, const uint32_t value)
     SPI.transfer((uint8_t)(value & 0x0000FF));
     digitalWrite(slaveSelectPin, HIGH);
 }
+
+/** @} */
 

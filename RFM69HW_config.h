@@ -1,4 +1,4 @@
-/*******************************************************************************
+/*
 The MIT License (MIT)
 
 Copyright (c) 2014 Jacob McGladdery
@@ -20,16 +20,28 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-*******************************************************************************/
+*/
+
+/**
+ * @file  RFM69HW_config.h
+ * @brief Configuration for the RFM69HW driver.
+ */
+
+/**
+ * @addtogroup RFM69HW
+ * @{
+ */
 
 #ifndef RFM69HW_CONFIG_H
 #define RFM69HW_CONFIG_H
 
 /**
- * The module type based on its frequency.
- * The possible values are: 315, 433, 868, or 915.
+ * @brief   The module type based on its frequency.
+ * @details The possible values are: 315, 433, 868, or 915.
  */
 #define RFM69HW_MODULE_FR_MHZ (915)
+
+/** @} */
 
 #endif // RFM69HW_CONFIG_H
 
