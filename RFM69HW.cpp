@@ -201,6 +201,17 @@ void RFM69HW::setBroadcastAddress(const uint8_t address)
     write8(RFM69HW_BROADCASTADRS, address);
 }
 
+/**
+ * @brief   Sets the carrier frequency.
+ * @details Writes a new carrier frequency value to radio module. This switches
+ *          the channel the radio is operating on.
+ * @note    This function will step through different operating modes while
+ *          changing the channel in order to avoid spectral splatter. Therefore
+ *          this function is safe to use in rapid frequency hopping
+ *          applications.
+ *
+ * @param[in] mhz The carrier frequency to set in megahertz.
+ */
 void RFM69HW::setCarrierFrequency(const uint16_t mhz)
 {
     if ((FR_MIN_MHZ <= mhz) && (mhz <= FR_MAX_MHZ))
