@@ -166,8 +166,8 @@ THE SOFTWARE.
  * @defgroup Oscillator
  * @{
  */
-#define RFM69HW_OSC_RC_CAL_START    ((uint8_t)0x80)
-#define RFM69HW_OSC_RC_CAL_DONE     ((uint8_t)0x40)
+#define RFM69HW_OSC1_RC_CAL_START    ((uint8_t)0x80)
+#define RFM69HW_OSC1_RC_CAL_DONE     ((uint8_t)0x40)
 /** @} */
 
 /**
@@ -205,10 +205,41 @@ THE SOFTWARE.
  * @defgroup Power_Amplifier_Level
  * @{
  */
-#define RFM69HW_PALEVEL_PA0_ON          ((uint8_t)0x80)
-#define RFM69HW_PALEVEL_PA1_ON          ((uint8_t)0x40)
-#define RFM69HW_PALEVEL_PA2_ON          ((uint8_t)0x20)
-#define RFM69HW_PALEVEL_OUTPUT_POWER    ((uint8_t)0x1F)
+#define RFM69HW_PALEVEL_PA0_ON             ((uint8_t)0x80)
+#define RFM69HW_PALEVEL_PA1_ON             ((uint8_t)0x40)
+#define RFM69HW_PALEVEL_PA2_ON             ((uint8_t)0x60)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_0     ((uint8_t)0x00)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_1     ((uint8_t)0x01)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_2     ((uint8_t)0x02)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_3     ((uint8_t)0x03)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_4     ((uint8_t)0x04)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_5     ((uint8_t)0x05)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_6     ((uint8_t)0x06)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_7     ((uint8_t)0x07)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_8     ((uint8_t)0x08)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_9     ((uint8_t)0x09)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_10    ((uint8_t)0x0A)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_11    ((uint8_t)0x0B)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_12    ((uint8_t)0x0C)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_13    ((uint8_t)0x0D)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_14    ((uint8_t)0x0E)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_15    ((uint8_t)0x0F)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_16    ((uint8_t)0x10)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_17    ((uint8_t)0x11)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_18    ((uint8_t)0x12)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_19    ((uint8_t)0x13)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_20    ((uint8_t)0x14)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_21    ((uint8_t)0x15)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_22    ((uint8_t)0x16)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_23    ((uint8_t)0x17)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_24    ((uint8_t)0x18)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_25    ((uint8_t)0x19)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_26    ((uint8_t)0x1A)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_27    ((uint8_t)0x1B)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_28    ((uint8_t)0x1C)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_29    ((uint8_t)0x1D)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_30    ((uint8_t)0x1E)
+#define RFM69HW_PALEVEL_OUTPUT_POWER_31    ((uint8_t)0x1F)
 /** @} */
 
 /**
@@ -281,25 +312,25 @@ THE SOFTWARE.
  * @defgroup On_Off_Keying_Peak
  * @{
  */
-#define RFM69HW_OOKPEAK_THRESH_TYPE_FIXED            ((uint8_t)0x00)
-#define RFM69HW_OOKPEAK_THRESH_TYPE_PEAK             ((uint8_t)0x40)
-#define RFM69HW_OOKPEAK_THRESH_TYPE_AVERAGE          ((uint8_t)0x80)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_STEP_0_5_DB      ((uint8_t)0x00)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_STEP_1_0_DB      ((uint8_t)0x08)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_STEP_1_5_DB      ((uint8_t)0x10)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_STEP_2_0_DB      ((uint8_t)0x18)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_STEP_3_0_DB      ((uint8_t)0x20)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_STEP_4_0_DB      ((uint8_t)0x28)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_STEP_5_0_DB      ((uint8_t)0x30)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_STEP_6_0_DB      ((uint8_t)0x38)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_DEC_1_CHIP       ((uint8_t)0x00)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_DEC_0_5_CHIP     ((uint8_t)0x01)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_DEC_0_25_CHIP    ((uint8_t)0x02)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_DEC_0_2_CHIP     ((uint8_t)0x03)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_DEC_2_CHIP       ((uint8_t)0x04)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_DEC_4_CHIP       ((uint8_t)0x05)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_DEC_8_CHIP       ((uint8_t)0x06)
-#define RFM69HW_OOKPEAK_PEAK_THRESH_DEC_16_CHIP      ((uint8_t)0x07)
+#define RFM69HW_OOKPEAK_THRESH_TYPE_FIXED       ((uint8_t)0x00)
+#define RFM69HW_OOKPEAK_THRESH_TYPE_PEAK        ((uint8_t)0x40)
+#define RFM69HW_OOKPEAK_THRESH_TYPE_AVERAGE     ((uint8_t)0x80)
+#define RFM69HW_OOKPEAK_THRESH_STEP_0_5_DB      ((uint8_t)0x00)
+#define RFM69HW_OOKPEAK_THRESH_STEP_1_0_DB      ((uint8_t)0x08)
+#define RFM69HW_OOKPEAK_THRESH_STEP_1_5_DB      ((uint8_t)0x10)
+#define RFM69HW_OOKPEAK_THRESH_STEP_2_0_DB      ((uint8_t)0x18)
+#define RFM69HW_OOKPEAK_THRESH_STEP_3_0_DB      ((uint8_t)0x20)
+#define RFM69HW_OOKPEAK_THRESH_STEP_4_0_DB      ((uint8_t)0x28)
+#define RFM69HW_OOKPEAK_THRESH_STEP_5_0_DB      ((uint8_t)0x30)
+#define RFM69HW_OOKPEAK_THRESH_STEP_6_0_DB      ((uint8_t)0x38)
+#define RFM69HW_OOKPEAK_THRESH_DEC_1_CHIP       ((uint8_t)0x00)
+#define RFM69HW_OOKPEAK_THRESH_DEC_0_5_CHIP     ((uint8_t)0x01)
+#define RFM69HW_OOKPEAK_THRESH_DEC_0_25_CHIP    ((uint8_t)0x02)
+#define RFM69HW_OOKPEAK_THRESH_DEC_0_2_CHIP     ((uint8_t)0x03)
+#define RFM69HW_OOKPEAK_THRESH_DEC_2_CHIP       ((uint8_t)0x04)
+#define RFM69HW_OOKPEAK_THRESH_DEC_4_CHIP       ((uint8_t)0x05)
+#define RFM69HW_OOKPEAK_THRESH_DEC_8_CHIP       ((uint8_t)0x06)
+#define RFM69HW_OOKPEAK_THRESH_DEC_16_CHIP      ((uint8_t)0x07)
 /** @} */
 
 /**
@@ -341,25 +372,57 @@ THE SOFTWARE.
 #define RFM69HW_DIOMAPPING1_DIO0_CONTINUOUS_TIMEOUT_OR_TX    ((uint8_t)0x40)
 #define RFM69HW_DIOMAPPING1_DIO0_CONTINUOUS_RSSI             ((uint8_t)0x80)
 #define RFM69HW_DIOMAPPING1_DIO0_CONTINUOUS_READY            ((uint8_t)0xC0)
+#define RFM69HW_DIOMAPPING1_DIO0_PACKET_CRC_OR_SENT          ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING1_DIO0_PACKET_PAYLOAD_OR_TX        ((uint8_t)0x40)
+#define RFM69HW_DIOMAPPING1_DIO0_PACKET_SYNC                 ((uint8_t)0x80)
+#define RFM69HW_DIOMAPPING1_DIO0_PACKET_RSSI_PLL             ((uint8_t)0xC0)
 #define RFM69HW_DIOMAPPING1_DIO1_CONTINUOUS_DCLK             ((uint8_t)0x00)
-#define RFM69HW_DIOMAPPING1_DIO2    ((uint8_t)0x0C)
-#define RFM69HW_DIOMAPPING1_DIO3    ((uint8_t)0x03)
+#define RFM69HW_DIOMAPPING1_DIO1_CONTINUOUS_RX_OR_TX         ((uint8_t)0x10)
+#define RFM69HW_DIOMAPPING1_DIO1_CONTINUOUS_SYNC_OR_PLL      ((uint8_t)0x30)
+#define RFM69HW_DIOMAPPING1_DIO1_PACKET_FIFO_LEVEL           ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING1_DIO1_PACKET_FIFO_FULL            ((uint8_t)0x10)
+#define RFM69HW_DIOMAPPING1_DIO1_PACKET_FIFO_NOT_EMPTY       ((uint8_t)0x20)
+#define RFM69HW_DIOMAPPING1_DIO1_PACKET_TIMEOUT_OR_PLL       ((uint8_t)0x30)
+#define RFM69HW_DIOMAPPING1_DIO2_CONTINUOUS_DATA             ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING1_DIO2_PACKET_FIFO_NOT_EMPTY       ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING1_DIO2_PACKET_DATA                 ((uint8_t)0x04)
+#define RFM69HW_DIOMAPPING1_DIO2_PACKET_AUTO_MODE            ((uint8_t)0x0C)
+#define RFM69HW_DIOMAPPING1_DIO3_CONTINUOUS_RSSI_OR_TX       ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING1_DIO3_CONTINUOUS_RX_OR_TX         ((uint8_t)0x01)
+#define RFM69HW_DIOMAPPING1_DIO3_CONTINUOUS_AUTO_MODE        ((uint8_t)0x02)
+#define RFM69HW_DIOMAPPING1_DIO3_CONTINUOUS_TIMEOUT_OR_TX    ((uint8_t)0x03)
+#define RFM69HW_DIOMAPPING1_DIO3_PACKET_FIFO_FULL            ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING1_DIO3_PACKET_RSSI_OR_TX           ((uint8_t)0x01)
+#define RFM69HW_DIOMAPPING1_DIO3_PACKET_SYNC                 ((uint8_t)0x02)
+#define RFM69HW_DIOMAPPING1_DIO3_PACKET_PLL                  ((uint8_t)0x03)
 /** @} */
 
 /**
  * @defgroup DIO_Mapping_2
  * @{
  */
-#define RFM69HW_DIOMAPPING2_DIO4
-#define RFM69HW_DIOMAPPING2_DIO5
-#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC            ((uint8_t)0x00)
-#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC_OVER_2     ((uint8_t)0x01)
-#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC_OVER_4     ((uint8_t)0x02)
-#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC_OVER_8     ((uint8_t)0x03)
-#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC_OVER_16    ((uint8_t)0x04)
-#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC_OVER_32    ((uint8_t)0x05)
-#define RFM69HW_DIOMAPPING2_CLKOUT_RC               ((uint8_t)0x06)
-#define RFM69HW_DIOMAPPING2_CLKOUT_OFF              ((uint8_t)0x07)
+#define RFM69HW_DIOMAPPING2_DIO4_CONTINUOUS_TIMEOUT_OR_TX     ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING2_DIO4_CONTINUOUS_RX_OR_TX          ((uint8_t)0x40)
+#define RFM69HW_DIOMAPPING2_DIO4_CONTINUOUS_SYNC              ((uint8_t)0x80)
+#define RFM69HW_DIOMAPPING2_DIO4_CONTINUOUS_PLL               ((uint8_t)0xC0)
+#define RFM69HW_DIOMAPPING2_DIO4_PACKET_TIMEOUT_OR_READY      ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING2_DIO4_PACKET_RSSI_OR_TX            ((uint8_t)0x40)
+#define RFM69HW_DIOMAPPING2_DIO4_PACKET_RX                    ((uint8_t)0x80)
+#define RFM69HW_DIOMAPPING2_DIO4_PACKET_PLL                   ((uint8_t)0xC0)
+#define RFM69HW_DIOMAPPING2_DIO5_CONTINUOUS_CLKOUT            ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING2_DIO5_CONTINUOUS_RSSI_OR_CLKOUT    ((uint8_t)0x10)
+#define RFM69HW_DIOMAPPING2_DIO5_CONTINUOUS_READY             ((uint8_t)0x30)
+#define RFM69HW_DIOMAPPING2_DIO5_PACKET_CLKOUT                ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING2_DIO5_PACKET_DATA                  ((uint8_t)0x10)
+#define RFM69HW_DIOMAPPING2_DIO5_PACKET_READY                 ((uint8_t)0x30)
+#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC                      ((uint8_t)0x00)
+#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC_OVER_2               ((uint8_t)0x01)
+#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC_OVER_4               ((uint8_t)0x02)
+#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC_OVER_8               ((uint8_t)0x03)
+#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC_OVER_16              ((uint8_t)0x04)
+#define RFM69HW_DIOMAPPING2_CLKOUT_FXOSC_OVER_32              ((uint8_t)0x05)
+#define RFM69HW_DIOMAPPING2_CLKOUT_RC                         ((uint8_t)0x06)
+#define RFM69HW_DIOMAPPING2_CLKOUT_OFF                        ((uint8_t)0x07)
 /** @} */
 
 /**
@@ -464,8 +527,8 @@ THE SOFTWARE.
  * @defgroup Temperature_1
  * @{
  */
-#define RFM69HW_TEMP1_TEMP_MEAS_START      ((uint8_t)0x08)
-#define RFM69HW_TEMP1_TEMP_MEAS_RUNNING    ((uint8_t)0x04)
+#define RFM69HW_TEMP1_MEAS_START      ((uint8_t)0x08)
+#define RFM69HW_TEMP1_MEAS_RUNNING    ((uint8_t)0x04)
 /** @} */
 
 /**
