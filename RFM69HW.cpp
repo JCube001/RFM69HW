@@ -64,6 +64,18 @@ const float RFM69HW::TEMP_MAX_C = 85.0f;
 const float RFM69HW::TEMP_MIN_C = -40.0f;
 const uint8_t RFM69HW::VERSION = 0x24;
 
+/**
+ * @brief   Constructor.
+ * @details Initializes the RFM69HW radio driver with the values of the SPI
+ *          slave select pin and the reset pin.
+ *
+ * @param[in] slaveSelectPin The GPIO pin to use for slave select with the
+ *                           radio. If not specified, then this value defaults
+ *                           to using the Arduino macro SS.
+ * @param[in] resetPin       The GPIO pin to use for reseting the radio. If not
+ *                           specified, then the manual reset feature will be
+ *                           disabled.
+ */
 RFM69HW::RFM69HW(const int8_t slaveSelectPin, const int8_t resetPin) :
     slaveSelectPin(slaveSelectPin),
     resetPin(resetPin)
@@ -75,6 +87,18 @@ RFM69HW::RFM69HW(const int8_t slaveSelectPin, const int8_t resetPin) :
     }
 }
 
+/**
+ * @brief   Initializes the SPI bus, GPIO, and some common parameters.
+ * @details Starts the SPI bus and sets its bit order, data mode, and clock
+ *          divider so as to be suitable for use with the RFM69HW. The initial
+ *          bit rate and carrier frequency of the radio can also be set.
+ *
+ * @param[in] bps   The radio bit rate in bits per second.
+ * @param[in] mhz   The radio carrier frequency in megahertz.
+ * @retval    true  If the radio module can be communicated with.
+ * @retval    false If the radio module can not be communicated with.
+ * @return          Whether or not the radio started successfully.
+ */
 bool RFM69HW::begin(const uint32_t bps, const uint16_t mhz)
 {
     SPI.begin();
@@ -96,44 +120,60 @@ bool RFM69HW::begin(const uint32_t bps, const uint16_t mhz)
     return false;
 }
 
+/**
+ * @brief   Gets the current bit rate.
+ * @details Reads the currently set bit rate of the radio and converts to bits
+ *          per second.
+ * @f[
+ *   \text{BitRate} = \frac{\text{FXOSC}}{\text{BitRate}_{\text{Register}}}
+ * @f]
+ *
+ * @return The bit rate of the radio in bits per second.
+ */
 uint32_t RFM69HW::bitRate()
 {
-    const uint16_t br = readRegister2(REG_BITRATEMSB);
-    return (uint16_t)(((float)FXOSC_HZ / br) + 0.5f);
+    const uint16_t br = read16(RFM69HW_BITRATEMSB);
+    return (uint32_t)(((float)FXOSC_HZ / br) + 0.5f);
 }
 
+/**
+ * @brief   Gets the current broadcast address.
+ * @details Reads the currently set broadcast address of the radio.
+ *
+ * @return The numeric broadcast address.
+ */
 uint8_t RFM69HW::broadcastAddress()
 {
-    return readRegister1(REG_BROADCASTADRS);
+    return read8(RFM69HW_BROADCASTADRS);
 }
 
 void RFM69HW::calibrateOscillator()
 {
     standby();
-    writeRegister1(REG_OSC1, OSC1_RC_CAL_START);
-    while (!(readRegister1(REG_OSC1) & OSC1_RC_CAL_DONE));
+    write8(RFM69HW_OSC1, RFM69HW_OSC1_RC_CAL_START);
+    while (!(read8(RFM69HW_OSC1) & RFM69HW_OSC1_RC_CAL_DONE));
 }
 
 uint16_t RFM69HW::carrierFrequency()
 {
-    const uint32_t frf = readRegister3(REG_FRFMSB);
+    const uint32_t frf = read32(RFM69HW_FRFMSB);
     return frf / FREQUENCY_MULTIPLIER;
 }
 
 uint32_t RFM69HW::frequencyDeviation()
 {
-    const uint16_t fdev = readRegister2(REG_FDEVMSB);
+    const uint16_t fdev = read16(RFM69HW_FDEVMSB);
     return fdev * FSTEP_HZ;
 }
 
 uint8_t RFM69HW::nodeAddress()
 {
-    return readRegister1(REG_NODEADRS);
+    return read8(RFM69HW_NODEADRS);
 }
 
 uint8_t RFM69HW::payloadLength()
 {
-    return readRegister1(REG_PAYLOADLENGTH);
+    return read8(RFM69HW_PAYLOADLENGTH);
 }
 
 void RFM69HW::reset()
@@ -152,13 +192,13 @@ void RFM69HW::setBitRate(const uint32_t bps)
     if ((BITRATE_MIN_BPS <= bps) && (bps <= BITRATE_MAX_BPS))
     {
         const uint16_t br = (uint16_t)(((float)FXOSC_HZ / bps) + 0.5f);
-        writeRegister2(REG_BITRATEMSB, br);
+        write16(RFM69HW_BITRATEMSB, br);
     }
 }
 
 void RFM69HW::setBroadcastAddress(const uint8_t address)
 {
-    writeRegister1(REG_BROADCASTADRS, address);
+    write8(RFM69HW_BROADCASTADRS, address);
 }
 
 void RFM69HW::setCarrierFrequency(const uint16_t mhz)
@@ -166,18 +206,18 @@ void RFM69HW::setCarrierFrequency(const uint16_t mhz)
     if ((FR_MIN_MHZ <= mhz) && (mhz <= FR_MAX_MHZ))
     {
         const uint32_t frf = (uint32_t)mhz * FREQUENCY_MULTIPLIER;
-        const uint8_t mode = readRegister1(REG_OPMODE);
-        if (mode & OPMODE_MODE_TX)
+        const uint8_t mode = read8(RFM69HW_OPMODE);
+        if (mode & RFM69HW_OPMODE_TX)
         {
-            writeRegister1(REG_OPMODE, OPMODE_MODE_RX);
-            writeRegister3(REG_FRFMSB, frf);
-            writeRegister1(REG_OPMODE, OPMODE_MODE_TX);
+            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_RX);
+            write32(RFM69HW_FRFMSB, frf);
+            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_TX);
         }
-        else if (mode & OPMODE_MODE_RX)
+        else if (mode & RFM69HW_OPMODE_RX)
         {
-            writeRegister3(REG_FRFMSB, frf);
-            writeRegister1(REG_OPMODE, OPMODE_MODE_FS);
-            writeRegister1(REG_OPMODE, OPMODE_MODE_RX);
+            write32(RFM69HW_FRFMSB, frf);
+            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_FS);
+            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_RX);
         }
     }
 }
@@ -187,7 +227,7 @@ void RFM69HW::setEncryptionKey(const char *key, const uint8_t length)
     if ((NULL != key) && ((0 < length) && (length <= AESKEY_NUM_BYTES)))
     {
         digitalWrite(slaveSelectPin, LOW);
-        SPI.transfer(REG_AESKEY1 | 0x80);
+        SPI.transfer(RFM69HW_AESKEY1 | 0x80);
         for (uint8_t i = 0; i < length; ++i)
         {
             SPI.transfer(key[i]);
@@ -206,18 +246,18 @@ void RFM69HW::setFrequencyDeviation(const uint32_t hz)
     if ((FDA_MIN_HZ <= hz) && (hz <= FDA_MAX_HZ))
     {
         const uint16_t fdev = (uint16_t)(((float)hz / FSTEP_HZ) + 0.5f);
-        writeRegister2(REG_FDEVMSB, fdev);
+        write16(RFM69HW_FDEVMSB, fdev);
     }
 }
 
 void RFM69HW::setNodeAddress(const uint8_t address)
 {
-    writeRegister1(REG_NODEADRS, address);
+    write8(RFM69HW_NODEADRS, address);
 }
 
 void RFM69HW::setPayloadLength(const uint8_t length)
 {
-    writeRegister1(REG_PAYLOADLENGTH, length);
+    write8(RFM69HW_PAYLOADLENGTH, length);
 }
 
 void RFM69HW::setSyncWord(const char *word, const uint8_t length)
@@ -225,40 +265,40 @@ void RFM69HW::setSyncWord(const char *word, const uint8_t length)
     if ((NULL != word) && ((0 < length) && (length <= SYNCVALUE_NUM_BYTES)))
     {
         digitalWrite(slaveSelectPin, LOW);
-        SPI.transfer(REG_SYNCVALUE1 | 0x80);
+        SPI.transfer(RFM69HW_SYNCVALUE1 | 0x80);
         for (uint8_t i = 0; i < length; ++i)
         {
             SPI.transfer(word[i]);
         }
         digitalWrite(slaveSelectPin, HIGH);
         // Update the sync size value in the sync config register
-        const uint8_t config = (readRegister1(REG_SYNCCONFIG) & 0xC7)
+        const uint8_t config = (read8(RFM69HW_SYNCCONFIG) & 0xC7)
                 | ((length - 1) << 3);
-        writeRegister1(REG_SYNCCONFIG, config);
+        write8(RFM69HW_SYNCCONFIG, config);
     }
 }
 
 void RFM69HW::sleep()
 {
-    writeRegister1(REG_OPMODE, OPMODE_MODE_SLEEP);
+    write8(RFM69HW_OPMODE, RFM69HW_OPMODE_SLEEP);
 }
 
 void RFM69HW::standby()
 {
-    writeRegister1(REG_OPMODE, OPMODE_MODE_STDBY);
+    write8(RFM69HW_OPMODE, RFM69HW_OPMODE_STDBY);
 }
 
 float RFM69HW::temperature()
 {
     standby();
-    writeRegister1(REG_TEMP1, TEMP1_TEMP_MEAS_START);
-    while (readRegister1(REG_TEMP1) & TEMP1_TEMP_MEAS_RUNNING);
-    return mapTemperature(readRegister1(REG_TEMP2));
+    write8(RFM69HW_TEMP1, RFM69HW_TEMP1_MEAS_START);
+    while (read8(RFM69HW_TEMP1) & RFM69HW_TEMP1_MEAS_RUNNING);
+    return mapTemperature(read8(RFM69HW_TEMP2));
 }
 
 uint8_t RFM69HW::version()
 {
-    return readRegister1(REG_VERSION);
+    return read8(RFM69HW_VERSION);
 }
 
 float RFM69HW::mapTemperature(const uint8_t value)
