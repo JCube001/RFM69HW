@@ -122,8 +122,7 @@ bool RFM69HW::begin(const uint32_t bps, const uint16_t mhz)
 
 /**
  * @brief   Gets the current bit rate.
- * @details Reads the currently set bit rate of the radio and converts to bits
- *          per second.
+ * @details Reads the bit rate of the radio and converts to bits per second.
  * @f[
  *   \text{BitRate} = \frac{\text{FXOSC}}{\text{BitRate}_{\text{Register}}}
  * @f]
@@ -138,7 +137,7 @@ uint32_t RFM69HW::bitRate()
 
 /**
  * @brief   Gets the current broadcast address.
- * @details Reads the currently set broadcast address of the radio.
+ * @details Reads the broadcast address of the radio.
  *
  * @return The numeric broadcast address.
  */
@@ -174,6 +173,33 @@ uint8_t RFM69HW::nodeAddress()
 uint8_t RFM69HW::payloadLength()
 {
     return read8(RFM69HW_PAYLOADLENGTH);
+}
+
+/**
+ * @brief   Gets the preamble size.
+ * @details Reads the preamble size from the radio.
+ *
+ * @return The preamble size in bytes.
+ */
+uint16_t RFM69HW::preambleSize()
+{
+    return read16(RFM69HW_PREAMBLEMSB);
+}
+
+/**
+ * @brief   Gets the received signal strength.
+ * @details Reads the Received Signal Strength Indicator (RSSI) on the radio.
+ * @f[
+ *   \text{RSSI} = \frac{-\text{RssiValue}_{\text{Register}}}{2}
+ * @f]
+ *
+ * @return The signal strength in Decibel-milliwatts.
+ */
+float RFM69HW::signalStrength()
+{
+    write8(RFM69HW_RSSICONFIG, RFM69HW_RSSICONFIG_START);
+    while (!(read8(RFM69HW_RSSICONFIG) & RFM69HW_RSSICONFIG_DONE));
+    return -((float)read8(RFM69HW_RSSIVALUE)) / 2.0f;
 }
 
 void RFM69HW::reset()
@@ -225,17 +251,21 @@ void RFM69HW::setCarrierFrequency(const uint16_t mhz)
     {
         const uint32_t frf = (uint32_t)mhz * FREQUENCY_MULTIPLIER;
         const uint8_t mode = read8(RFM69HW_OPMODE);
-        if (mode & RFM69HW_OPMODE_TX)
+        switch (mode & RFM69HW_OPMODE_MODE)
         {
-            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_RX);
+        case RFM69HW_OPMODE_MODE_TX:
+            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_RX);
             write24(RFM69HW_FRFMSB, frf);
-            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_TX);
-        }
-        else if (mode & RFM69HW_OPMODE_RX)
-        {
+            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_TX);
+            break;
+        case RFM69HW_OPMODE_MODE_RX:
             write24(RFM69HW_FRFMSB, frf);
-            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_FS);
-            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_RX);
+            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_FS);
+            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_RX);
+            break;
+        default:
+            write24(RFM69HW_FRFMSB, frf);
+            break;
         }
     }
 }
@@ -278,6 +308,17 @@ void RFM69HW::setPayloadLength(const uint8_t length)
     write8(RFM69HW_PAYLOADLENGTH, length);
 }
 
+/**
+ * @brief   Sets the preamble size.
+ * @details Writes a new preamble size to the radio.
+ *
+ * @param[in] size The new size of the preamble in bytes.
+ */
+void RFM69HW::setPreambleSize(const uint16_t size)
+{
+    write16(RFM69HW_PREAMBLEMSB, size);
+}
+
 void RFM69HW::setSyncWord(const char *word, const uint8_t length)
 {
     if ((NULL != word) && ((0 < length) && (length <= SYNCVALUE_NUM_BYTES)))
@@ -298,21 +339,26 @@ void RFM69HW::setSyncWord(const char *word, const uint8_t length)
 
 void RFM69HW::sleep()
 {
-    write8(RFM69HW_OPMODE, RFM69HW_OPMODE_SLEEP);
+    write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_SLEEP);
 }
 
 void RFM69HW::standby(const bool listen)
 {
+    const uint8_t mode = read8(RFM69HW_OPMODE);
     if (listen)
     {
         write8(RFM69HW_OPMODE,
-               RFM69HW_OPMODE_LISTEN_ON | RFM69HW_OPMODE_STDBY);
+               RFM69HW_OPMODE_LISTEN_ON | RFM69HW_OPMODE_MODE_STDBY);
+    }
+    else if (mode & RFM69HW_OPMODE_LISTEN_ON)
+    {
+        write8(RFM69HW_OPMODE,
+               RFM69HW_OPMODE_LISTEN_ABORT | RFM69HW_OPMODE_MODE_STDBY);
+        write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_STDBY);
     }
     else
     {
-        write8(RFM69HW_OPMODE,
-               RFM69HW_OPMODE_LISTEN_ABORT | RFM69HW_OPMODE_STDBY);
-        write8(RFM69HW_OPMODE, RFM69HW_OPMODE_STDBY);
+        write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_STDBY);
     }
 }
 

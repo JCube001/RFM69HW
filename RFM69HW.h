@@ -140,11 +140,12 @@ THE SOFTWARE.
 #define RFM69HW_OPMODE_SEQUENCER_OFF    ((uint8_t)0x80)
 #define RFM69HW_OPMODE_LISTEN_ON        ((uint8_t)0x40)
 #define RFM69HW_OPMODE_LISTEN_ABORT     ((uint8_t)0x20)
-#define RFM69HW_OPMODE_SLEEP            ((uint8_t)0x00)
-#define RFM69HW_OPMODE_STDBY            ((uint8_t)0x04)
-#define RFM69HW_OPMODE_FS               ((uint8_t)0x08)
-#define RFM69HW_OPMODE_TX               ((uint8_t)0x0C)
-#define RFM69HW_OPMODE_RX               ((uint8_t)0x10)
+#define RFM69HW_OPMODE_MODE             ((uint8_t)0x1C)
+#define RFM69HW_OPMODE_MODE_SLEEP       ((uint8_t)0x00)
+#define RFM69HW_OPMODE_MODE_STDBY       ((uint8_t)0x04)
+#define RFM69HW_OPMODE_MODE_FS          ((uint8_t)0x08)
+#define RFM69HW_OPMODE_MODE_TX          ((uint8_t)0x0C)
+#define RFM69HW_OPMODE_MODE_RX          ((uint8_t)0x10)
 /** @} */
 
 /**
@@ -580,6 +581,8 @@ public:
     uint32_t frequencyDeviation();
     uint8_t nodeAddress();
     uint8_t payloadLength();
+    uint16_t preambleSize();
+    float signalStrength();
     void reset();
     void setBitRate(const uint32_t bps);
     void setBroadcastAddress(const uint8_t address);
@@ -588,6 +591,7 @@ public:
     void setFrequencyDeviation(const uint32_t hz);
     void setNodeAddress(const uint8_t address);
     void setPayloadLength(const uint8_t length);
+    void setPreambleSize(const uint16_t size);
     void setSyncWord(const char *word, const uint8_t length);
     void sleep();
     void standby(const bool listen = false);
