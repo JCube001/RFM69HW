@@ -209,6 +209,13 @@ void RFM69HW::setBroadcastAddress(const uint8_t address)
  *          changing the channel in order to avoid spectral splatter. Therefore
  *          this function is safe to use in rapid frequency hopping
  *          applications.
+ * @warning The caller of this function must respect either the Rx or Tx start
+ *          procedures, depending on what mode they were in. This means waiting
+ *          for either the Rx ready or Tx ready interrupt to fire before
+ *          attempting to use the radio after a channel switch. If listening
+ *          for those interrupts is not possible, then the calling code should
+ *          have a delay or at least one millisecond after the call to this
+ *          function. 
  *
  * @param[in] mhz The carrier frequency to set in megahertz.
  */
@@ -294,9 +301,19 @@ void RFM69HW::sleep()
     write8(RFM69HW_OPMODE, RFM69HW_OPMODE_SLEEP);
 }
 
-void RFM69HW::standby()
+void RFM69HW::standby(const bool listen)
 {
-    write8(RFM69HW_OPMODE, RFM69HW_OPMODE_STDBY);
+    if (listen)
+    {
+        write8(RFM69HW_OPMODE,
+               RFM69HW_OPMODE_LISTEN_ON | RFM69HW_OPMODE_STDBY);
+    }
+    else
+    {
+        write8(RFM69HW_OPMODE,
+               RFM69HW_OPMODE_LISTEN_ABORT | RFM69HW_OPMODE_STDBY);
+        write8(RFM69HW_OPMODE, RFM69HW_OPMODE_STDBY);
+    }
 }
 
 /**

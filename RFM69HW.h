@@ -207,7 +207,7 @@ THE SOFTWARE.
  */
 #define RFM69HW_PALEVEL_PA0_ON             ((uint8_t)0x80)
 #define RFM69HW_PALEVEL_PA1_ON             ((uint8_t)0x40)
-#define RFM69HW_PALEVEL_PA2_ON             ((uint8_t)0x60)
+#define RFM69HW_PALEVEL_PA2_ON             ((uint8_t)0x20)
 #define RFM69HW_PALEVEL_OUTPUT_POWER_0     ((uint8_t)0x00)
 #define RFM69HW_PALEVEL_OUTPUT_POWER_1     ((uint8_t)0x01)
 #define RFM69HW_PALEVEL_OUTPUT_POWER_2     ((uint8_t)0x02)
@@ -590,7 +590,7 @@ public:
     void setPayloadLength(const uint8_t length);
     void setSyncWord(const char *word, const uint8_t length);
     void sleep();
-    void standby();
+    void standby(const bool listen = false);
     float temperature();
     uint8_t version();
 
