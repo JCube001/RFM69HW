@@ -56,8 +56,9 @@ private:
     const uint8_t slaveSelectPin;
 };
 
-RFM69HW::RFM69HW(const int8_t slaveSelectPin, const int8_t resetPin) :
+RFM69HW::RFM69HW(const int8_t interruptPin, const int8_t slaveSelectPin, const int8_t resetPin) :
     Stream(),
+    interruptPin(interruptPin),
     slaveSelectPin(slaveSelectPin),
     resetPin(resetPin)
 {
@@ -123,19 +124,43 @@ void RFM69HW::reset() {
     delay(5);
 }
 
-#if 0
-void RFM69HW::transmit(const void* payload, uint8_t size) {
+int RFM69HW::available() {
+    // TODO
+    return 0;
+}
+
+int RFM69HW::peek() {
+    // TODO
+    return 0;
+}
+
+void RFM69HW::flush() {
+    // TODO
+}
+
+int RFM69HW::read() {
+    // TODO
+    return 0;
+}
+
+size_t RFM69HW::write(uint8_t value) {
+    // Just pass the argument as a byte array to the buffer write() function
+    return write(&value, sizeof(value));
+}
+
+size_t RFM69HW::write(const uint8_t* buffer, size_t size) {
     // Change the op mode to standby. This will prevent the radio from
     // receiving anything and therefore overwriting the FIFO while we are still
     // sending the current payload out.
     standby();
 
-    // Write the payload to the device FIFO
+    // Write the payload to the device FIFO. Do this in its own scope so the
+    // lifetime of the SPIGuard object is guaranteed.
     {
         volatile SPIGuard guard(slaveSelectPin);
         SPI.transfer(RFM69HW_FIFO | 0x80);
         for (uint8_t i = 0; i < size; ++i)
-            SPI.transfer(((uint8_t*)payload)[i]);
+            SPI.transfer(buffer[i]);
     }
 
     // Change the op mode to TX. As long as the TX start condition has been set
@@ -147,31 +172,8 @@ void RFM69HW::transmit(const void* payload, uint8_t size) {
 
     // Transmission complete. Change the op mode to standby.
     standby();
-}
-#endif
 
-int RFM69HW::available() {
-    // TODO
-}
-
-int RFM69HW::peek() {
-    // TODO
-}
-
-void RFM69HW::flush() {
-    // TODO
-}
-
-int RFM69HW::read() {
-    // TODO
-}
-
-size_t RFM69HW::write(uint8_t value) {
-    // TODO
-}
-
-size_t RFM69HW::write(const uint8_t* buffer, size_t size) {
-    // TODO
+    return 0; // TODO: Return a real amount of bytes transmited
 }
 
 void RFM69HW::standby() {

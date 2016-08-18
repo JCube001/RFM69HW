@@ -30,13 +30,11 @@ THE SOFTWARE.
 
 class RFM69HW : public Stream {
 public:
-    RFM69HW(const int8_t slaveSelectPin=SS, const int8_t resetPin=-1);
+    RFM69HW(const int8_t interruptPin, const int8_t slaveSelectPin=SS, const int8_t resetPin=-1);
 
     bool begin();
     bool begin(const uint32_t baudRate, const uint32_t frequency);
     void reset();
-
-    // XXX: void transmit(const void* payload, uint8_t size);
 
     int available();
     int peek();
@@ -75,6 +73,7 @@ private:
     void write16(const uint8_t reg, const uint16_t value);
     void write24(const uint8_t reg, const uint32_t value);
 
+    const int8_t interruptPin;
     const int8_t slaveSelectPin;
     const int8_t resetPin;
 };
