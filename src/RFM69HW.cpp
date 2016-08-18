@@ -26,7 +26,6 @@ THE SOFTWARE.
 
 #include <SPI.h>
 #include "RFM69HW_registers.h"
-#include "SPIGuard.h"
 
 // Utilities
 #define MILLION  (1000000)
@@ -38,6 +37,24 @@ THE SOFTWARE.
 #define FXOSC_HZ  (32 * MILLION)
 #define FSTEP_HZ  (61)
 #define SPI_SPEED_HZ  (10 * MILLION)
+
+class SPIGuard {
+public:
+    SPIGuard(const uint8_t slaveSelectPin) :
+        slaveSelectPin(slaveSelectPin)
+    {
+        SPI.beginTransaction(SPISettings(SPI_SPEED_HZ, MSBFIRST, SPI_MODE0));
+        digitalWrite(slaveSelectPin, LOW);
+    }
+
+    ~SPIGuard() {
+        digitalWrite(slaveSelectPin, HIGH);
+        SPI.endTransaction();
+    }
+
+private:
+    const uint8_t slaveSelectPin;
+};
 
 RFM69HW::RFM69HW(const int8_t slaveSelectPin, const int8_t resetPin) :
     Stream(),
