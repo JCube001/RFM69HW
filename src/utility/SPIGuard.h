@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2014 Jacob McGladdery
+Copyright (c) 2014-2016 Jacob McGladdery
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,26 +22,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
- * @file  RFM69HW_config.h
- * @brief Configuration for the RFM69HW driver.
- */
+#ifndef _SPIGUARD_H_
+#define _SPIGUARD_H_
 
-/**
- * @addtogroup RFM69HW
- * @{
- */
+class SPIGuard {
+public:
+    SPIGuard(const uint8_t slaveSelectPin);
+    ~SPIGuard();
 
-#ifndef RFM69HW_CONFIG_H
-#define RFM69HW_CONFIG_H
+private:
+    const uint8_t slaveSelectPin;
+};
 
-/**
- * @brief   The module type based on its frequency.
- * @details The possible values are: 315, 433, 868, or 915.
- */
-#define RFM69HW_MODULE_FR_MHZ (915)
-
-/** @} */
-
-#endif // RFM69HW_CONFIG_H
-
+#endif // _SPIGUARD_H_

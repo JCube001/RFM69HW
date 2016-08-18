@@ -9,28 +9,31 @@
 #######################################
 
 RFM69HW	KEYWORD1
-begin	KEYWORD2
-bitRate	KEYWORD2
-broadcastAddress	KEYWORD2
-calibrateOscillator	KEYWORD2
-carrierFrequency	KEYWORD2
-frequencyDeviation	KEYWORD2
-nodeAddress	KEYWORD2
-payloadLength	KEYWORD2
-preambleSize	KEYWORD2
-signalStrength	KEYWORD2
-reset	KEYWORD2
-setBitRate	KEYWORD2
-setBroadcastAddress	KEYWORD2
-setCarrierFrequency	KEYWORD2
-setEncryptionKey	KEYWORD2
-setFrequencyDeviation	KEYWORD2
-setNodeAddress	KEYWORD2
-setPayloadLength	KEYWORD2
-setPreambleSize	KEYWORD2
-setSyncWord	KEYWORD2
-sleep	KEYWORD2
-standby	KEYWORD2
-temperature	KEYWORD2
-version	KEYWORD2
 
+begin	KEYWORD2
+reset	KEYWORD2
+
+available	KEYWORD2
+peek	KEYWORD2
+flush	KEYWORD2
+
+read	KEYWORD2
+write	KEYWORD2
+
+standby	KEYWORD2
+sleep	KEYWORD2
+
+baudRate	KEYWORD2
+setBaudRate	KEYWORD2
+
+carrierFrequency	KEYWORD2
+setCarrierFrequency	KEYWORD2
+
+carrierFrequencyMHz	KEYWORD2
+setCarrierFrequencyMHz	KEYWORD2
+
+receivedSignalStrength	KEYWORD2
+
+version	KEYWORD2
+temperature	KEYWORD2
+calibrateOscillator	KEYWORD2

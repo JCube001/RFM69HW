@@ -1,7 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2014 Jacob McGladdery
+Copyright (c) 2014-2016 Jacob McGladdery
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,499 +22,298 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-/**
- * @file  RFM69HW.cpp
- * @brief Implementation for the RFM69HW driver.
- */
+#include "RFM69HW.h"
 
 #include <SPI.h>
-#include "RFM69HW.h"
-#include "RFM69HW_config.h"
+#include "RFM69HW_registers.h"
+#include "SPIGuard.h"
 
-/**
- * @addtogroup RFM69HW
- * @{
- */
+// Utilities
+#define MILLION  (1000000)
 
-const uint8_t RFM69HW::AESKEY_NUM_BYTES = 16;
-const uint32_t RFM69HW::BITRATE_MAX_BPS = 300 * 1000;
-const uint32_t RFM69HW::BITRATE_MIN_BPS = 1200;
-const uint32_t RFM69HW::FDA_MAX_HZ = 500 * 1000;
-const uint32_t RFM69HW::FDA_MIN_HZ = 600;
-#if RFM69HW_MODULE_FR_MHZ == 315
-const uint16_t RFM69HW::FR_MAX_MHZ = 340;
-const uint16_t RFM69HW::FR_MIN_MHZ = 290;
-#elif RFM69HW_MODULE_FR_MHZ == 433
-const uint16_t RFM69HW::FR_MAX_MHZ = 510;
-const uint16_t RFM69HW::FR_MIN_MHZ = 424;
-#elif RFM69HW_MODULE_FR_MHZ == 868
-const uint16_t RFM69HW::FR_MAX_MHZ = 890;
-const uint16_t RFM69HW::FR_MIN_MHZ = 862;
-#elif RFM69HW_MODULE_FR_MHZ == 915
-const uint16_t RFM69HW::FR_MAX_MHZ = 1020;
-const uint16_t RFM69HW::FR_MIN_MHZ = 890;
-#else
-#error RFM69HW_MODULE_FR_MHZ must be defined as either 315, 433, 868, or 915
-#endif // RFM69HW_MODULE_FR_MHZ
-const uint16_t RFM69HW::FREQUENCY_MULTIPLIER = 16384;
-const uint8_t RFM69HW::FSTEP_HZ = 61;
-const uint32_t RFM69HW::FXOSC_HZ = 32 * 1000000;
-const uint8_t RFM69HW::SYNCVALUE_NUM_BYTES = 8;
-const float RFM69HW::TEMP_MAX_C = 85.0f;
-const float RFM69HW::TEMP_MIN_C = -40.0f;
-const uint8_t RFM69HW::VERSION = 0x24;
+// Device info
+#define VERSION  (0x24)
 
-/**
- * @brief   Constructor.
- * @details Initializes the RFM69HW radio driver with the values of the SPI
- *          slave select pin and the reset pin.
- *
- * @param[in] slaveSelectPin The GPIO pin to use for slave select with the
- *                           radio. If not specified, then this value defaults
- *                           to using the Arduino macro SS.
- * @param[in] resetPin       The GPIO pin to use for reseting the radio. If not
- *                           specified, then the manual reset feature will be
- *                           disabled.
- */
+// Clocks
+#define FXOSC_HZ  (32 * MILLION)
+#define FSTEP_HZ  (61)
+#define SPI_SPEED_HZ  (10 * MILLION)
+
 RFM69HW::RFM69HW(const int8_t slaveSelectPin, const int8_t resetPin) :
+    Stream(),
     slaveSelectPin(slaveSelectPin),
     resetPin(resetPin)
 {
-    pinMode(slaveSelectPin, OUTPUT);
-    if (resetPin >= 0)
-    {
-        pinMode(resetPin, OUTPUT);
-    }
 }
 
-/**
- * @brief   Initializes the SPI bus, GPIO, and some common parameters.
- * @details Starts the SPI bus and sets its bit order, data mode, and clock
- *          divider so as to be suitable for use with the RFM69HW. The initial
- *          bit rate and carrier frequency of the radio can also be set.
- *
- * @param[in] bps   The radio bit rate in bits per second.
- * @param[in] mhz   The radio carrier frequency in megahertz.
- * @retval    true  If the radio module can be communicated with.
- * @retval    false If the radio module can not be communicated with.
- * @return          Whether or not the radio started successfully.
- */
-bool RFM69HW::begin(const uint32_t bps, const uint16_t mhz)
-{
+bool RFM69HW::begin() {
+    // Initialize SPI
     SPI.begin();
-    SPI.setBitOrder(MSBFIRST);
-    SPI.setDataMode(SPI_MODE0);
-    SPI.setClockDivider(SPI_CLOCK_DIV16);
+
+    // Setup and deassert the slave select pin
+    pinMode(slaveSelectPin, OUTPUT);
     digitalWrite(slaveSelectPin, HIGH);
-    if (resetPin >= 0)
-    {
+
+    // Setup and deassert the reset pin, if it was specified. Note that if the
+    // reset pin was not left floating on the board, then the user must specify
+    // the reset pin in order to ensure correct operation.
+    if (resetPin >= 0) {
+        pinMode(resetPin, OUTPUT);
         digitalWrite(resetPin, LOW);
     }
+
+    // The RFM69HW module performs an automatic power-on reset at power up.
+    // Need to wait for 10 ms before commencing communication on SPI.
     delay(10);
-    if (version() == VERSION)
-    {
-        setBitRate(bps);
-        setCarrierFrequency(mhz);
-        return true;
-    }
-    return false;
+
+    // Sanity check to make sure we're really communicating with a RFM69HW
+    if (version() != VERSION)
+        return false;
+
+    // Disable the CLKOUT signal. It shouldn't be needed for anything and
+    // disabling it reduces current consumption.
+    write8(RFM69HW_DIOMAPPING2, RFM69HW_DIOMAPPING2_CLKOUT_OFF);
+
+    // Set the TX start condition to be whenever data has been written into the
+    // FIFO. This will cause the transmit function to transmit data immediatly.
+    write8(RFM69HW_FIFOTHRESH, RFM69HW_FIFOTHRESH_TX_START_FIFO_NOT_EMPTY);
+
+    return true;
 }
 
-/**
- * @brief   Gets the current bit rate.
- * @details Reads the bit rate of the radio and converts to bits per second.
- * @f[
- *   \text{BitRate} = \frac{\text{FXOSC}}{\text{BitRate}_{\text{Register}}}
- * @f]
- *
- * @return The bit rate of the radio in bits per second.
- */
-uint32_t RFM69HW::bitRate()
-{
-    const uint16_t br = read16(RFM69HW_BITRATEMSB);
-    return (uint32_t)(((float)FXOSC_HZ / br) + 0.5f);
+bool RFM69HW::begin(const uint32_t baudRate, const uint32_t frequency) {
+    if (!begin())
+        return false;
+
+    // Set the frequency and baud rate to use
+    setBaudRate(baudRate);
+    setCarrierFrequencyMHz(frequency);
+
+    return true;
 }
 
-/**
- * @brief   Gets the current broadcast address.
- * @details Reads the broadcast address of the radio.
- *
- * @return The numeric broadcast address.
- */
-uint8_t RFM69HW::broadcastAddress()
-{
-    return read8(RFM69HW_BROADCASTADRS);
+void RFM69HW::reset() {
+    if (resetPin < 0)
+        return;
+
+    // The manual reset sequence is:
+    //   1) Pull the reset pin high for 100 us
+    //   2) Pull the reset pin back to low
+    //   3) Wait for 5 ms before using the device again
+    digitalWrite(resetPin, HIGH);
+    delayMicroseconds(100);
+    digitalWrite(resetPin, LOW);
+    delay(5);
 }
 
-void RFM69HW::calibrateOscillator()
-{
+#if 0
+void RFM69HW::transmit(const void* payload, uint8_t size) {
+    // Change the op mode to standby. This will prevent the radio from
+    // receiving anything and therefore overwriting the FIFO while we are still
+    // sending the current payload out.
     standby();
-    write8(RFM69HW_OSC1, RFM69HW_OSC1_RC_CAL_START);
-    while (!(read8(RFM69HW_OSC1) & RFM69HW_OSC1_RC_CAL_DONE));
-}
 
-uint16_t RFM69HW::carrierFrequency()
-{
-    const uint32_t frf = read24(RFM69HW_FRFMSB);
-    return frf / FREQUENCY_MULTIPLIER;
-}
-
-uint32_t RFM69HW::frequencyDeviation()
-{
-    const uint16_t fdev = read16(RFM69HW_FDEVMSB);
-    return fdev * FSTEP_HZ;
-}
-
-uint8_t RFM69HW::nodeAddress()
-{
-    return read8(RFM69HW_NODEADRS);
-}
-
-uint8_t RFM69HW::payloadLength()
-{
-    return read8(RFM69HW_PAYLOADLENGTH);
-}
-
-/**
- * @brief   Gets the preamble size.
- * @details Reads the preamble size from the radio.
- *
- * @return The preamble size in bytes.
- */
-uint16_t RFM69HW::preambleSize()
-{
-    return read16(RFM69HW_PREAMBLEMSB);
-}
-
-/**
- * @brief   Gets the received signal strength.
- * @details Reads the Received Signal Strength Indicator (RSSI) on the radio.
- * @f[
- *   \text{RSSI} = \frac{-\text{RssiValue}_{\text{Register}}}{2}
- * @f]
- *
- * @return The signal strength in Decibel-milliwatts.
- */
-float RFM69HW::signalStrength()
-{
-    write8(RFM69HW_RSSICONFIG, RFM69HW_RSSICONFIG_START);
-    while (!(read8(RFM69HW_RSSICONFIG) & RFM69HW_RSSICONFIG_DONE));
-    return -((float)read8(RFM69HW_RSSIVALUE)) / 2.0f;
-}
-
-void RFM69HW::reset()
-{
-    if (resetPin >= 0)
+    // Write the payload to the device FIFO
     {
-        digitalWrite(resetPin, HIGH);
-        delayMicroseconds(100);
-        digitalWrite(resetPin, LOW);
-        delay(5);
+        volatile SPIGuard guard(slaveSelectPin);
+        SPI.transfer(RFM69HW_FIFO | 0x80);
+        for (uint8_t i = 0; i < size; ++i)
+            SPI.transfer(((uint8_t*)payload)[i]);
     }
-}
 
-void RFM69HW::setBitRate(const uint32_t bps)
-{
-    if ((BITRATE_MIN_BPS <= bps) && (bps <= BITRATE_MAX_BPS))
-    {
-        const uint16_t br = (uint16_t)(((float)FXOSC_HZ / bps) + 0.5f);
-        write16(RFM69HW_BITRATEMSB, br);
-    }
-}
+    // Change the op mode to TX. As long as the TX start condition has been set
+    // to FIFO not empty, then the transmission will occur immediatly.
+    setOpMode(RFM69HW_OPMODE_MODE_TX);
 
-void RFM69HW::setBroadcastAddress(const uint8_t address)
-{
-    write8(RFM69HW_BROADCASTADRS, address);
-}
+    // Wait until the transmission has completed
+    while (~read8(RFM69HW_IRQFLAGS2) & RFM69HW_IRQFLAGS2_PACKET_SENT);
 
-/**
- * @brief   Sets the carrier frequency.
- * @details Writes a new carrier frequency value to radio module. This switches
- *          the channel the radio is operating on.
- * @note    This function will step through different operating modes while
- *          changing the channel in order to avoid spectral splatter. Therefore
- *          this function is safe to use in rapid frequency hopping
- *          applications.
- * @warning The caller of this function must respect either the Rx or Tx start
- *          procedures, depending on what mode they were in. This means waiting
- *          for either the Rx ready or Tx ready interrupt to fire before
- *          attempting to use the radio after a channel switch. If listening
- *          for those interrupts is not possible, then the calling code should
- *          have a delay or at least one millisecond after the call to this
- *          function. 
- *
- * @param[in] mhz The carrier frequency to set in megahertz.
- */
-void RFM69HW::setCarrierFrequency(const uint16_t mhz)
-{
-    if ((FR_MIN_MHZ <= mhz) && (mhz <= FR_MAX_MHZ))
-    {
-        const uint32_t frf = (uint32_t)mhz * FREQUENCY_MULTIPLIER;
-        const uint8_t mode = read8(RFM69HW_OPMODE);
-        switch (mode & RFM69HW_OPMODE_MODE)
-        {
-        case RFM69HW_OPMODE_MODE_TX:
-            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_RX);
-            write24(RFM69HW_FRFMSB, frf);
-            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_TX);
-            break;
-        case RFM69HW_OPMODE_MODE_RX:
-            write24(RFM69HW_FRFMSB, frf);
-            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_FS);
-            write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_RX);
-            break;
-        default:
-            write24(RFM69HW_FRFMSB, frf);
-            break;
-        }
-    }
-}
-
-void RFM69HW::setEncryptionKey(const char *key, const uint8_t length)
-{
-    if ((NULL != key) && ((0 < length) && (length <= AESKEY_NUM_BYTES)))
-    {
-        digitalWrite(slaveSelectPin, LOW);
-        SPI.transfer(RFM69HW_AESKEY1 | 0x80);
-        for (uint8_t i = 0; i < length; ++i)
-        {
-            SPI.transfer(key[i]);
-        }
-        // Fill in any remaining bytes with 0
-        for (uint8_t i = 0; i < (AESKEY_NUM_BYTES - length); ++i)
-        {
-            SPI.transfer(0x00);
-        }
-        digitalWrite(slaveSelectPin, HIGH);
-    }
-}
-
-void RFM69HW::setFrequencyDeviation(const uint32_t hz)
-{
-    if ((FDA_MIN_HZ <= hz) && (hz <= FDA_MAX_HZ))
-    {
-        const uint16_t fdev = (uint16_t)(((float)hz / FSTEP_HZ) + 0.5f);
-        write16(RFM69HW_FDEVMSB, fdev);
-    }
-}
-
-void RFM69HW::setNodeAddress(const uint8_t address)
-{
-    write8(RFM69HW_NODEADRS, address);
-}
-
-void RFM69HW::setPayloadLength(const uint8_t length)
-{
-    write8(RFM69HW_PAYLOADLENGTH, length);
-}
-
-/**
- * @brief   Sets the preamble size.
- * @details Writes a new preamble size to the radio.
- *
- * @param[in] size The new size of the preamble in bytes.
- */
-void RFM69HW::setPreambleSize(const uint16_t size)
-{
-    write16(RFM69HW_PREAMBLEMSB, size);
-}
-
-void RFM69HW::setSyncWord(const char *word, const uint8_t length)
-{
-    if ((NULL != word) && ((0 < length) && (length <= SYNCVALUE_NUM_BYTES)))
-    {
-        digitalWrite(slaveSelectPin, LOW);
-        SPI.transfer(RFM69HW_SYNCVALUE1 | 0x80);
-        for (uint8_t i = 0; i < length; ++i)
-        {
-            SPI.transfer(word[i]);
-        }
-        digitalWrite(slaveSelectPin, HIGH);
-        // Update the sync size value in the sync config register
-        const uint8_t config = (read8(RFM69HW_SYNCCONFIG) & 0xC7)
-                | ((length - 1) << 3);
-        write8(RFM69HW_SYNCCONFIG, config);
-    }
-}
-
-void RFM69HW::sleep()
-{
-    write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_SLEEP);
-}
-
-void RFM69HW::standby(const bool listen)
-{
-    const uint8_t mode = read8(RFM69HW_OPMODE);
-    if (listen)
-    {
-        write8(RFM69HW_OPMODE,
-               RFM69HW_OPMODE_LISTEN_ON | RFM69HW_OPMODE_MODE_STDBY);
-    }
-    else if (mode & RFM69HW_OPMODE_LISTEN_ON)
-    {
-        write8(RFM69HW_OPMODE,
-               RFM69HW_OPMODE_LISTEN_ABORT | RFM69HW_OPMODE_MODE_STDBY);
-        write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_STDBY);
-    }
-    else
-    {
-        write8(RFM69HW_OPMODE, RFM69HW_OPMODE_MODE_STDBY);
-    }
-}
-
-/**
- * @brief   Gets the temperature of the radio module.
- * @details Reads the temperature of the radio and converts it to degrees
- *          Celsius.
- * @warning The CMOS temperature sensor on the RFM69HW is known to be wildly
- *          inaccurate. If you really wish to make use of this sensor, then
- *          you will need to take an initial reading and compare it against
- *          the known ambient temperature. The difference between the two
- *          values can then be used as an offset for estimating the actual
- *          temperature based on future return values from this function.
- *
- * @return The temperature of the radio module in degrees Celsius.
- */
-float RFM69HW::temperature()
-{
+    // Transmission complete. Change the op mode to standby.
     standby();
-    write8(RFM69HW_TEMP1, RFM69HW_TEMP1_MEAS_START);
-    while (read8(RFM69HW_TEMP1) & RFM69HW_TEMP1_MEAS_RUNNING);
-    return mapTemperature(read8(RFM69HW_TEMP2));
+}
+#endif
+
+int RFM69HW::available() {
+    // TODO
 }
 
-/**
- * @brief   Gets the entire numeric version ID from the radio module.
- * @details Reads the version register of the radio as-is.
- *
- * @retval 0x24 The expected version number of the RFM69HW.
- * @return      The full version number of the radio module.
- */
-uint8_t RFM69HW::version()
-{
+int RFM69HW::peek() {
+    // TODO
+}
+
+void RFM69HW::flush() {
+    // TODO
+}
+
+int RFM69HW::read() {
+    // TODO
+}
+
+size_t RFM69HW::write(uint8_t value) {
+    // TODO
+}
+
+size_t RFM69HW::write(const uint8_t* buffer, size_t size) {
+    // TODO
+}
+
+void RFM69HW::standby() {
+    setOpMode(RFM69HW_OPMODE_MODE_STANDBY);
+}
+
+void RFM69HW::sleep() {
+    setOpMode(RFM69HW_OPMODE_MODE_SLEEP);
+}
+
+uint32_t RFM69HW::baudRate() {
+    return FXOSC_HZ / read16(RFM69HW_BITRATEMSB);
+}
+
+void RFM69HW::setBaudRate(const uint32_t value) {
+    write16(RFM69HW_BITRATEMSB, FXOSC_HZ / value);
+}
+
+uint32_t RFM69HW::carrierFrequency() {
+    return FSTEP_HZ * read24(RFM69HW_FRFMSB);
+}
+
+void RFM69HW::setCarrierFrequency(const uint32_t value) {
+    const uint32_t frf = value / FSTEP_HZ;
+
+    // Handle hopping under different op modes
+    switch (read8(RFM69HW_OPMODE) & RFM69HW_OPMODE_MODE_MASK) {
+    case RFM69HW_OPMODE_MODE_TX:
+        // Transmitter channel hop sequence:
+        //   1) Set the op mode to RX
+        //   2) Change the carrier frequency
+        //   3) Set the op mode back to TX
+        //   4) Wait for the TX start procedure to finish
+        setOpMode(RFM69HW_OPMODE_MODE_RX);
+        write24(RFM69HW_FRFMSB, frf);
+        setOpMode(RFM69HW_OPMODE_MODE_TX);
+        while (~read8(RFM69HW_IRQFLAGS1) & RFM69HW_IRQFLAGS1_TX_READY);
+        break;
+    case RFM69HW_OPMODE_MODE_RX:
+        // Receiver channel hop sequence:
+        //   1) Change the carrier frequency
+        //   2) Set the op mode to FS
+        //   3) Set the op mode back to RX
+        //   4) Wait for the RX start procedure to finish
+        write24(RFM69HW_FRFMSB, frf);
+        setOpMode(RFM69HW_OPMODE_MODE_FS);
+        setOpMode(RFM69HW_OPMODE_MODE_RX);
+        while (~read8(RFM69HW_IRQFLAGS1) & RFM69HW_IRQFLAGS1_RX_READY);
+        break;
+    default:
+        // Change the carrier frequency. It can take up to 80 us before the
+        // channel hop is completed
+        write24(RFM69HW_FRFMSB, frf);
+        delayMicroseconds(80);
+        break;
+    }
+}
+
+uint32_t RFM69HW::carrierFrequencyMHz() {
+    return carrierFrequency() / MILLION;
+}
+
+void RFM69HW::setCarrierFrequencyMHz(const uint32_t value) {
+    setCarrierFrequency(value * MILLION);
+}
+
+int8_t RFM69HW::receivedSignalStrength() {
+    // Take the measurement
+    write8(RFM69HW_RSSICONFIG, RFM69HW_RSSICONFIG_RSSI_START);
+    while (~read8(RFM69HW_RSSICONFIG) & RFM69HW_RSSICONFIG_RSSI_DONE);
+
+    // Convert the measured value to decibal-milliwatts. The equation used is:
+    // y = -x / 2. This equation comes from the RSSI value register
+    // documentation in the datasheet.
+    return -((int16_t)read8(RFM69HW_RSSIVALUE)) / 2;
+}
+
+uint8_t RFM69HW::version() {
     return read8(RFM69HW_VERSION);
 }
 
-/**
- * @brief   Linear mapping function for computing temperature.
- * @details Function for computing the temperature read from the CMOS sensor on
- *          the radio module to degrees Celsius. Uses hard-coded values to
- *          speed up computation.
- *
- * @param[in] value The raw temperature value read from the device register.
- * @return          The computed temperature in degrees Celsius.
- */
-float RFM69HW::mapTemperature(const uint8_t value)
-{
-    return ((((float)value - 255.0f) / -255.0f) * (TEMP_MAX_C - TEMP_MIN_C))
-            + TEMP_MIN_C;
+int8_t RFM69HW::temperature() {
+    // This procedure can only be run in standby or FS op mode
+    standby();
+
+    // Take the measurement. According to the datasheet, this should finish in
+    // less then 100 us.
+    write8(RFM69HW_TEMP1, RFM69HW_TEMP1_MEAS_START);
+    while (read8(RFM69HW_TEMP1) & RFM69HW_TEMP1_MEAS_RUNNING);
+
+    // Convert the measured value to degrees Celsius. The conversion involves
+    // taking the measurement and passing it through the equation:
+    // y = -x + 170. This equation does not come from the datasheet. It was
+    // found through testing where a value of 150 was found to be equal to a
+    // temperature of 20 C, and 140 was found to be equal to 30 C. The
+    // temperature sensor measures temperature using an ADC as -1 C per LSB, so
+    // the equation is obviously linear.
+    return -((int16_t)read8(RFM69HW_TEMP2)) + 170;
 }
 
-/**
- * @brief   Reads one register.
- * @details Performs a read-only SPI transfer of the register @p reg.
- *
- * @param[in] reg The register to read.
- * @return        The 8-bit value read from the register.
- */
-uint8_t RFM69HW::read8(const uint8_t reg)
-{
-    uint8_t value;
-    digitalWrite(slaveSelectPin, LOW);
-    SPI.transfer(reg & 0x7F);
-    value = SPI.transfer(0x00);
-    digitalWrite(slaveSelectPin, HIGH);
-    return value;
+void RFM69HW::calibrateOscillator() {
+    // This procedure can only be run in standby mode
+    standby();
+
+    // Trigger calibration and wait for it to finish. Unknown exactly how long
+    // this may take. Worst case time would be 500 us.
+    write8(RFM69HW_OSC1, RFM69HW_OSC1_RC_CAL_START);
+    while (~read8(RFM69HW_OSC1) & RFM69HW_OSC1_RC_CAL_DONE);
 }
 
-/**
- * @brief   Reads two registers.
- * @details Performs a burst mode read-only SPI transfer of the register @p reg
- *          and the register at the next address.
- *
- * @param[in] reg The register to start reading at.
- * @return        The 16-bit value read from the two registers.
- */
-uint16_t RFM69HW::read16(const uint8_t reg)
-{
+void RFM69HW::setOpMode(const uint8_t value) {
+    // Set the operating mode. Wait until the mode ready interrupt occurs
+    // before continuing.
+    write8(RFM69HW_OPMODE, value);
+    while (~read8(RFM69HW_IRQFLAGS1) & RFM69HW_IRQFLAGS1_MODE_READY);
+}
+
+uint8_t RFM69HW::read8(const uint8_t reg) {
+    volatile SPIGuard guard(slaveSelectPin);
+    SPI.transfer(reg);
+    return SPI.transfer(0x00);
+}
+
+uint16_t RFM69HW::read16(const uint8_t reg) {
     uint16_t value = 0;
-    digitalWrite(slaveSelectPin, LOW);
-    SPI.transfer(reg & 0x7F);
-    value |= ((uint16_t)SPI.transfer(0x00) << 8) & 0xFF00;
-    value |= (uint16_t)SPI.transfer(0x00) & 0x00FF;
-    digitalWrite(slaveSelectPin, HIGH);
+    volatile SPIGuard guard(slaveSelectPin);
+    SPI.transfer(reg);
+    value |= (uint16_t)SPI.transfer(0x00) << 8;
+    value |= (uint16_t)SPI.transfer(0x00);
     return value;
 }
 
-/**
- * @brief   Reads three registers.
- * @details Performs a burst mode read-only SPI transfer of the register @p reg
- *          and the registers at the next two addresses.
- *
- * @param[in] reg The register to start reading at.
- * @return        The 24-bit value read from the three registers.
- */
-uint32_t RFM69HW::read24(const uint8_t reg)
-{
+uint32_t RFM69HW::read24(const uint8_t reg) {
     uint32_t value = 0;
-    digitalWrite(slaveSelectPin, LOW);
-    SPI.transfer(reg & 0x7F);
-    value |= ((uint32_t)SPI.transfer(0x00) << 16) & 0xFF0000;
-    value |= ((uint32_t)SPI.transfer(0x00) << 8) & 0x00FF00;
-    value |= (uint32_t)SPI.transfer(0x00) & 0x0000FF;
-    digitalWrite(slaveSelectPin, HIGH);
+    volatile SPIGuard guard(slaveSelectPin);
+    SPI.transfer(reg);
+    value |= (uint32_t)SPI.transfer(0x00) << 16;
+    value |= (uint32_t)SPI.transfer(0x00) << 8;
+    value |= (uint32_t)SPI.transfer(0x00);
     return value;
 }
 
-/**
- * @brief   Writes one register.
- * @details Performs a write-only SPI transfer of the register @p reg.
- *
- * @param[in] reg   The register to write.
- * @param[in] value The 8-bit value to write to the register.
- */
-void RFM69HW::write8(const uint8_t reg, const uint8_t value)
-{
-    digitalWrite(slaveSelectPin, LOW);
+void RFM69HW::write8(const uint8_t reg, const uint8_t value) {
+    volatile SPIGuard guard(slaveSelectPin);
     SPI.transfer(reg | 0x80);
     SPI.transfer(value);
-    digitalWrite(slaveSelectPin, HIGH);
 }
 
-/**
- * @brief   Writes two registers.
- * @details Performs a burst mode write-only SPI transfer of the register
- *          @p reg and the register at the next address.
- *
- * @param[in] reg   The register to start writing at.
- * @param[in] value The 16-bit value to write to the registers.
- */
-void RFM69HW::write16(const uint8_t reg, const uint16_t value)
-{
-    digitalWrite(slaveSelectPin, LOW);
+void RFM69HW::write16(const uint8_t reg, const uint16_t value) {
+    volatile SPIGuard guard(slaveSelectPin);
     SPI.transfer(reg | 0x80);
-    SPI.transfer((uint8_t)((value & 0xFF00) >> 8));
-    SPI.transfer((uint8_t)(value & 0x00FF));
-    digitalWrite(slaveSelectPin, HIGH);
+    SPI.transfer((value & 0xFF00) >> 8);
+    SPI.transfer((value & 0x00FF));
 }
 
-/**
- * @brief   Writes three registers.
- * @details Performs a burst mode write-only SPI transfer of the register
- *          @p reg and the registers at the next two addresses.
- *
- * @param[in] reg   The register to start writing at.
- * @param[in] value The 24-bit value to write to the registers.
- */
-void RFM69HW::write24(const uint8_t reg, const uint32_t value)
-{
-    digitalWrite(slaveSelectPin, LOW);
+void RFM69HW::write24(const uint8_t reg, const uint32_t value) {
+    volatile SPIGuard guard(slaveSelectPin);
     SPI.transfer(reg | 0x80);
-    SPI.transfer((uint8_t)((value & 0xFF0000) >> 16));
-    SPI.transfer((uint8_t)((value & 0x00FF00) >> 8));
-    SPI.transfer((uint8_t)(value & 0x0000FF));
-    digitalWrite(slaveSelectPin, HIGH);
+    SPI.transfer((value & 0xFF0000) >> 16);
+    SPI.transfer((value & 0x00FF00) >> 8);
+    SPI.transfer((value & 0x0000FF));
 }
-
-/** @} */
-
